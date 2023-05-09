@@ -1,0 +1,24 @@
+<form
+  hx-post="/clipboard/save"
+  hx-target="#main"
+  hx-trigger="submit, keyup[ctrlKey&&key=='Enter'] from:body"
+>
+  <div
+    class="m-auto max-w-2xl flex flex-col justify-center border border-gray-300 rounded-lg p-4"
+  >
+    <input hidden name="key" value="{{ .Key }}" />
+    <textarea
+      class="w-full outline-none p-2 rounded-xl"
+      id="content"
+      name="content"
+      rows="10"
+      placeholder="Enter your text here"
+    ></textarea>
+    <button
+      class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded mt-5"
+      type="submit"
+    >
+      Save
+    </button>
+  </div>
+</form>

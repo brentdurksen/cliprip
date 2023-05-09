@@ -1,0 +1,42 @@
+<div class="m-auto max-w-lg flex flex-col justify-center rounded-lg p-2">
+  <span class="text-gray-600 font-light text-sm p-5 w-full"
+    >Note that your clipboard content is only as secure as your secret. Easily
+    guessable secrets can be easily discovered.</span
+  >
+  <form id="keyForm" class="flex flex-col justify-center">
+    <input
+      class="w-full rounded-sm border border-gray-300 py-5 px-3 m-auto"
+      type="text"
+      name="key"
+      id="key"
+      placeholder="Secret"
+    />
+    <button
+      class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded mt-5 m-auto"
+      type="submit"
+    >
+      Open or Create
+    </button>
+  </form>
+  <script>
+    htmx.on("#keyForm", "submit", hashIt);
+    async function hashIt(e) {
+      e.preventDefault();
+      const form = document.getElementById("keyForm");
+      const key = form.elements["key"];
+      // Salt is client side only, so it's not a secret
+      // Prevents rainbow table attacks against the hash
+      const hash = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(
+          key.value + "00ec50d6-443a-4a7b-9181-7eacee791c22"
+        )
+      );
+      const hashArray = Array.from(new Uint8Array(hash));
+      const hashHex = hashArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      htmx.ajax("GET", `/components/clipboard?key=${hashHex}`, "#main");
+    }
+  </script>
+</div>
