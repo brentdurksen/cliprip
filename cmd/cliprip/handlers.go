@@ -1,94 +1,90 @@
 package main
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/utils"
 )
 
-func (app *application) getHome(c *gin.Context) {
-	b := new(bytes.Buffer)
-	app.templates.ExecuteTemplate(b, "search.tmpl", nil)
-	app.templates.ExecuteTemplate(c.Writer, "base.tmpl", template.HTML(b.String()))
+func (app *application) getHome(c *fiber.Ctx) error {
+	return c.Render("search", nil, "base")
 }
 
-func (app *application) getClipboardComponent(c *gin.Context) {
-	key := c.Request.FormValue("key")
+func (app *application) getClipboardComponent(c *fiber.Ctx) error {
+	key := c.FormValue("key")
 	if ok := validateHash(key); !ok {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	c.Header("HX-Push-Url", fmt.Sprintf("/clipboard/%s", key))
+	c.Set("HX-Push-Url", fmt.Sprintf("/clipboard/%s", key))
 	if _, ok := app.secrets[key]; ok {
-		app.templates.ExecuteTemplate(c.Writer, "read.tmpl", app.secrets[key])
+		return c.Render("read", app.secrets[key])
 	} else {
-		app.templates.ExecuteTemplate(c.Writer, "create.tmpl", createData{Key: c.Request.FormValue("key")})
+		return c.Render("create", &fiber.Map{"Key": key})
 	}
 }
 
-func (app *application) getReadComponent(c *gin.Context) {
-	key := c.Param("key")
+func (app *application) getReadComponent(c *fiber.Ctx) error {
+	key := c.Params("key")
 	if ok := validateHash(key); !ok {
-		app.notFound(c)
-		return
+		return app.badrequest(c)
 	}
 	if _, ok := app.secrets[key]; !ok {
-		app.notFound(c)
-		return
+		return app.notFound(c)
 	}
-	app.templates.ExecuteTemplate(c.Writer, "read.tmpl", app.secrets[key])
+	return c.Render("read", app.secrets[key])
 }
 
-func (app *application) getClipboard(c *gin.Context) {
-	key := c.Param("key")
+func (app *application) getClipboard(c *fiber.Ctx) error {
+	key := c.Params("key")
 	if ok := validateHash(key); !ok {
-		app.notFound(c)
-		return
+		return app.badrequest(c)
 	}
 	if _, ok := app.secrets[key]; !ok {
-		app.notFound(c)
-		return
+		return app.notFound(c)
 	}
-	b := new(bytes.Buffer)
-	app.templates.ExecuteTemplate(b, "read.tmpl", app.secrets[key])
-	app.templates.ExecuteTemplate(c.Writer, "base.tmpl", template.HTML(b.String()))
+	return c.Render("read", app.secrets[key], "base")
 }
 
-func (app *application) saveClipboard(c *gin.Context) {
-	key := c.Request.FormValue("key")
+func (app *application) saveClipboard(c *fiber.Ctx) error {
+	// Fiber reuses contexts, so we need to copy the key
+	key := utils.CopyString(c.FormValue("key"))
 	if ok := validateHash(key); !ok {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+		return c.SendStatus(http.StatusBadRequest)
 	}
-	content := c.Request.FormValue("content")
+	// Fiber reuses contexts, so we need to copy the content
+	content := utils.CopyString(c.FormValue("content"))
 	if len(content) == 0 {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+		return c.SendStatus(http.StatusBadRequest)
 	}
-
-	//TODO: validate content
 	app.secrets[key] = content
-	app.templates.ExecuteTemplate(c.Writer, "read.tmpl", content)
+	return c.Render("read", content)
 }
 
-func (app *application) deleteClipboard(c *gin.Context) {
-	key := c.Request.FormValue("key")
-	// TODO: Handle an invalid key better
+func (app *application) deleteClipboard(c *fiber.Ctx) error {
+	key := c.Params("key")
 	if ok := validateHash(key); !ok {
-		app.notFound(c)
-		return
+		return app.badrequest(c)
 	}
 	delete(app.secrets, key)
-	app.getClipboardComponent(c)
+	return app.getClipboardComponent(c)
 }
 
-func (app *application) notFound(c *gin.Context) {
-	b := new(bytes.Buffer)
-	app.templates.ExecuteTemplate(b, "404.tmpl", nil)
-	app.templates.ExecuteTemplate(c.Writer, "base.tmpl", template.HTML(b.String()))
-	c.AbortWithStatus(404)
+func (app *application) notFound(c *fiber.Ctx) error {
+	return c.Status(http.StatusNotFound).Render("error", &fiber.Map{"ErrorCode": "404", "ErrorMessage": "Not Found"}, "base")
+}
+func (app *application) badrequest(c *fiber.Ctx) error {
+	return c.Status(http.StatusBadRequest).Render("error", &fiber.Map{"ErrorCode": "400", "ErrorMessage": "Bad Request"}, "base")
+}
+
+func errorHandler(ctx *fiber.Ctx, err error) error {
+	code := fiber.StatusInternalServerError
+	var e *fiber.Error
+	if errors.As(err, &e) {
+		code = e.Code
+	}
+	return ctx.Status(code).Render("error", &fiber.Map{"ErrorCode": fmt.Sprintf("%v", code)}, "base")
 }

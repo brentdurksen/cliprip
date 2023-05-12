@@ -47,7 +47,7 @@
   <div
     id="delete"
     class="bg-stone-200 hover:bg-red-200 rounded-md cursor-pointer p-2 my-2"
-    hx-post="/clipboard/delete"
+    hx-delete
     hx-target="#main"
     hx-vals='js:{key: window.location.pathname.split("/").pop()}'
     onclick=""

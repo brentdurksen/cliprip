@@ -26,7 +26,6 @@
   </div>
 </form>
 <script>
-  htmx.on("htmx:afterSwap", (e) => console.log(e));
   htmx.on("#content", "input", (e) => {
     const save = document.getElementById("save");
     if (e.target.value.length > 0) {

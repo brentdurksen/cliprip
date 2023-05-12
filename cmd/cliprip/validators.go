@@ -15,7 +15,7 @@ func validateHash(input string) bool {
 		return false
 	}
 
-	// Reject hash that matches an empty string (given the salt appended)
+	// Reject hash that matches salt (i.e. an empty string)
 	if input == "a61f97a8aa10024cc73d4428117396e184926870935054446e84c1c4290da6c3" {
 		return false
 	}

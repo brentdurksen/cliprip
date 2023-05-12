@@ -1,27 +1,31 @@
 package main
 
 import (
-	"html/template"
-
-	"github.com/gin-contrib/gzip"
-	limits "github.com/gin-contrib/size"
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/favicon"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/template/html"
 )
 
 type application struct {
-	router    *gin.Engine
-	templates *template.Template
-	secrets   map[string]string // replace with SQLite
+	router  *fiber.App
+	secrets map[string]string // replace with SQLite
 }
 
 func main() {
-	r := gin.Default()
-	r.Use(gzip.Gzip(gzip.DefaultCompression))
-	r.Use(limits.RequestSizeLimiter(256000))
-	templates := template.Must(template.ParseGlob("ui/html/*.tmpl"))
+	engine := html.New("./ui/html", ".tmpl")
+	f := fiber.New(fiber.Config{
+		Views:        engine,
+		ErrorHandler: errorHandler,
+	})
+	f.Use(recover.New())
+	f.Use(compress.New())
+	f.Use(favicon.New(favicon.Config{File: "./ui/static/favicon.ico"}))
+
 	secrets := make(map[string]string)
 
-	app := &application{r, templates, secrets}
+	app := &application{f, secrets}
 	app.routes()
-	app.router.Run()
+	app.router.Listen(":8080")
 }
