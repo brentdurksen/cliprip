@@ -12,15 +12,24 @@
       placeholder="Secret"
     />
     <button
-      class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded mt-5 m-auto"
+      class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded mt-5 m-auto disabled:bg-gray-300 disabled:hover:bg-gray-300"
+      id="open"
+      disabled
       type="submit"
     >
       Open or Create
     </button>
   </form>
   <script>
-    htmx.on("#keyForm", "submit", hashIt);
-    async function hashIt(e) {
+    htmx.on("#key", "input", (e) => {
+      const open = document.getElementById("open");
+      if (e.target.value.length > 0) {
+        open.removeAttribute("disabled");
+      } else {
+        open.setAttribute("disabled", "");
+      }
+    });
+    htmx.on("#keyForm", "submit", async (e) => {
       e.preventDefault();
       const form = document.getElementById("keyForm");
       const key = form.elements["key"];
@@ -37,6 +46,6 @@
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
       htmx.ajax("GET", `/components/clipboard?key=${hashHex}`, "#main");
-    }
+    });
   </script>
 </div>

@@ -4,21 +4,35 @@
   hx-trigger="submit, keyup[ctrlKey&&key=='Enter'] from:body"
 >
   <div
-    class="m-auto max-w-2xl flex flex-col justify-center border border-gray-300 rounded-lg p-4"
+    class="m-auto max-w-2xl h-[calc(100vh-150px)] flex flex-col justify-center border border-gray-300 rounded-lg p-4"
   >
     <input hidden name="key" value="{{ .Key }}" />
     <textarea
-      class="w-full outline-none p-2 rounded-xl"
+      class="w-full h-full outline-none p-2 rounded-xl resize-none text-sm font-mono font-light"
       id="content"
       name="content"
       rows="10"
       placeholder="Enter your text here"
+      onload="this.focus();"
     ></textarea>
     <button
-      class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded mt-5"
+      class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded mt-5 disabled:bg-gray-300 disabled:hover:bg-gray-300"
+      id="save"
+      disabled
       type="submit"
     >
       Save
     </button>
   </div>
 </form>
+<script>
+  htmx.on("htmx:afterSwap", (e) => console.log(e));
+  htmx.on("#content", "input", (e) => {
+    const save = document.getElementById("save");
+    if (e.target.value.length > 0) {
+      save.removeAttribute("disabled");
+    } else {
+      save.setAttribute("disabled", "");
+    }
+  });
+</script>
